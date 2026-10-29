@@ -1,0 +1,110 @@
+:root {
+  --bg: #0b0b0c;
+  --panel: #111113;
+  --panel-2: #17171a;
+  --border: #232327;
+  --border-strong: #2f2f35;
+  --text: #e7e7ea;
+  --muted: #8b8b93;
+  --faint: #5a5a62;
+  --accent: #f26b1d;
+  --accent-dim: rgba(242, 107, 29, 0.14);
+  --green: #3ecf8e;
+  --green-dim: rgba(62, 207, 142, 0.12);
+  --red: #ef5b5b;
+  --red-dim: rgba(239, 91, 91, 0.12);
+  --yellow: #e8b93a;
+  --on-accent: #111;
+  --strong: #fff;
+  --error-text: #f3b4b4;
+  --dot: rgba(255, 255, 255, 0.045);
+  --stripe: rgba(255, 255, 255, 0.02);
+  --chrome: rgba(11, 11, 12, 0.85);
+  --chrome-side: rgba(17, 17, 19, 0.9);
+
+  --mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  color-scheme: dark;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+:root[data-theme='light'] {
+  --bg: #f6f6f4;
+  --panel: #ffffff;
+  --panel-2: #efefec;
+  --border: #e1e1dc;
+  --border-strong: #cfcfc8;
+  --text: #1b1b1e;
+  --muted: #62626b;
+  --faint: #8f8f98;
+  --accent: #d9540a;
+  --accent-dim: rgba(217, 84, 10, 0.12);
+  --green: #12875a;
+  --green-dim: rgba(18, 135, 90, 0.12);
+  --red: #d13b3b;
+  --red-dim: rgba(209, 59, 59, 0.1);
+  --yellow: #a97a0a;
+  --on-accent: #fff;
+  --strong: #000;
+  --error-text: #a52a2a;
+  --dot: rgba(0, 0, 0, 0.07);
+  --stripe: rgba(0, 0, 0, 0.025);
+  --chrome: rgba(246, 246, 244, 0.85);
+  --chrome-side: rgba(255, 255, 255, 0.9);
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  /* faint dot grid, as in the reference images */
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--dot) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+button,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

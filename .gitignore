@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# PyCharm
+lightning_logs/
+
+# UV 
+uv.lock
+
+# MLflow 
+mlruns/
+mlartifacts/
+*.ckpt
+!artifacts/checkpoints/best_mlflow_checkpoint.ckpt
+[0-9]*/
+
+# Local Data
+*.parquet
+*.json
+
+# Feature screener outputs
+outputs/

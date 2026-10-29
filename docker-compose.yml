@@ -1,0 +1,58 @@
+# The LLM (llama-server, OpenAI-compatible) runs on the host on port 8080 and must listen on 0.0.0.0.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    env_file: .env  # CHECKPOINT_PATH (and optional FRED_API_KEY) come from here
+    volumes:
+      - ./artifacts:/app/artifacts:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  mcp:
+    build:
+      context: .
+      dockerfile: docker/mcp.Dockerfile
+    environment:
+      FORECAST_API_BASE_URL: http://api:8000
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8001"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8001), 3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  harness:
+    build:
+      context: .
+      dockerfile: docker/harness.Dockerfile
+    environment:
+      MCP_URL: http://mcp:8001/mcp
+      LLM_URL: http://host.docker.internal:8080/v1
+      # Cloud models are offered in the UI only when the matching key is set (see .env.example)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_MODELS: ${OPENAI_MODELS:-gpt-5,gpt-5-mini}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mcp:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - harness

@@ -1,0 +1,162 @@
+# Single config for training and evaluation.
+#   train:  python -m ML_layer.train_model --config ML_layer/model-configs/ptf-config.yaml
+#   test:   python -m ML_layer.evaluate --config ML_layer/model-configs/ptf-config.yaml
+# All paths here and on the command line are relative to the repo root.
+# Everything outside the `test:` section at the end is shared. Evaluation (and any other test run) loads this file
+# with the `test:` section merged over it, so the data, features and model settings can never drift apart.
+version: "0.3.0"
+
+seed: 100
+
+mode: train
+
+dataset:
+  name: "ptf"
+  arguments:
+    data_directory: "data_pipeline/local_data/raw_data"
+    features: [
+      "log_return_1d",
+      "volume_rel_20d",
+      "low_ratio",
+      "rsi",
+      "volatility_20d",
+      "sector_vs_market",
+      "stock_vs_sector",
+      "beta_mkt",
+      "beta_sector",
+      "idio_vol_60d",
+      "vix_x_momentum"
+    ]
+    ticker_file: "data_pipeline/tickers_sp500.yaml"
+    split_ratios: [0.6, 0.2, 0.2]
+    split_seed: 12
+    window_size: 40
+    stride: 10
+    # Rank ticker-specific features against all tickers on each date (market-wide inputs such as FRED and
+    # calendar features are left as they are).
+    xs_rank_features: false
+    # Model target: false = each day's excess return (vs SPY); true = its percentile rank among tickers on that
+    # date (centred on 0), which removes the volatility scale from the target. Not used in the current checkpoint
+    # due to there being no way of ranking features in the API.
+    xs_rank_target: true
+    # Known-in-advance calendar inputs (day of week, month, month end, FOMC/CPI days). false removes them.
+    calendar_inputs: false
+    # EDGAR fundamentals: to use gross_profitability, asset_growth, net_share_issuance, accruals, book_to_market,
+    # sue or ear in `features`, set fundamentals_directory (they need xs_rank_features: true; missing values become
+    # the neutral rank). start_date drops earlier rows before the split ratios are applied: an ISO date,
+    # "fundamentals" (first date half the tickers have them, 2011-07-29 for the S&P 500 set) or null for all history.
+    # The ratios then cut the remaining range, so the test period moves.
+    fundamentals_directory: "data_pipeline/local_data/fundamentals"
+    start_date: null
+
+dataloader:
+  batch_size: 128
+  num_workers: 4
+
+optimizer:
+  name: "adam"
+  parameters:
+    lr: 3e-4
+    weight_decay: 0.0
+    betas: [0.9, 0.999]
+    eps: 1.0e-8
+
+scheduler:
+  function:
+    name: "cosine_annealing"
+    parameters:
+      T_max: 500
+      eta_min: 1.0e-6
+  trainer_parameters:
+    interval: "epoch"
+    frequency: 1
+
+# Monitors: "val_loss" (mode min), or the validation rank IC against realised excess returns,
+# "val_ic" (mean of h1/h5/h20) / "val_ic_h01" / "val_ic_h05" / "val_ic_h20" (mode max). Keep both callbacks on the same monitor.
+callbacks:
+  earlystopping:
+    monitor: "val_ic"
+    patience: 8
+    mode: "max"
+    verbose: true
+    min_delta: 0.0
+  mlflowmodelcheckpoint:
+    monitor: "val_ic"
+    mode: "max"
+
+trainer:
+  max_epochs: 500
+  num_sanity_val_steps: 2
+  val_check_interval: 1.0
+  limit_val_batches: 1.0
+  limit_train_batches: 1.0
+  log_every_n_steps: 10
+  enable_progress_bar: true
+  deterministic: false   # PTF uses non-deterministic ops internally
+  gradient_clip_val: 1.0
+  gradient_clip_algorithm: "norm"
+  precision: "32-true"
+
+# PTF hyperparameters — passed through runner.parameters to PTFRunner.__init__
+runner:
+  name: "ptf"
+  parameters:
+    hidden_size: 32
+    attention_head_size: 4
+    dropout: 0.2
+    # "quantile" = QuantileLoss (predicts the median); "mse" = mean squared error (predicts the mean).
+    # Changes the model's output layer, so a checkpoint only loads with the loss it was trained with.
+    loss: "mse"
+
+checkpoints:
+  trainer: null
+
+mlflow:
+  experiment_name: "feature-tuning"
+  tracking_uri: ${oc.env:MLFLOW_TRACKING_URI}
+  run_name: "ptf-${version}"
+  tags:
+    ticker_file: "${dataset.arguments.ticker_file}"
+
+  synchronous: false
+
+dagshub:
+  repo_owner: ${oc.env:DAGSHUB_REPO_OWNER}
+  repo_name: ${oc.env:DAGSHUB_REPO_NAME}
+  user_token: ${oc.env:DAGSHUB_USER_TOKEN}
+
+# Serving bundle built by ML_layer.prepare_checkpoint
+serving:
+  ridge_alpha: 1.0
+
+# Walk-forward evaluation (python -m ML_layer.walk_forward_tft --config ...):
+# one fold per test year Y, training through Y-2 and early-stopping on Y-1.
+walk_forward:
+  first_test_year: 2016
+  last_test_year: null      # null = latest year in the data
+  warm_start: false         # initialize fold Y from fold Y-1's best weights
+  output_dir: "ML_layer/walk_forward_tft"
+
+# --- Test runs -----------------------------------------------------------------------------------------------
+# Merged over everything above when a script loads the config with TrainingArgs(path, test=True) (evaluate.py).
+# Only list what differs from training; dataset, model and optimizer settings are inherited on purpose.
+test:
+  mode: test
+  # MLflow run whose best checkpoint is evaluated; set MLFLOW_RUN_ID in .env. It must have been trained with the
+  # dataset and runner settings above.
+  run_id: ${oc.env:MLFLOW_RUN_ID}
+  checkpoints:
+    trainer: "runs:/${run_id}/checkpoints/best_mlflow_checkpoint.ckpt"
+  # No schedule or early-stopping/checkpoint callbacks while testing.
+  scheduler: null
+  callbacks: null
+  trainer:
+    max_epochs: 1
+    num_sanity_val_steps: 0
+  mlflow:
+    run_name: "test-${version}"
+  # Split every model is scored on: "test" (default) or "val", the windows the TFT early-stops on. "val" checks that
+  # the evaluation reproduces the validation metrics logged during training (val_ic) and gives the baselines'
+  # IC on that period; it skips MLflow baseline logging and permutation importance.
+  evaluation:
+    split: "test"
