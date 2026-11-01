@@ -110,7 +110,7 @@ uv sync --group training
 
 **2. Build the training data**
 
-The training data is not distributed with this repository. It is downloaded from Yahoo Finance (and optionally FRED and SEC EDGAR) into `data_pipeline/local_data/`, which is gitignored. See [Data and licensing](./Readme.MD#data-and-licensing) before using it.
+The training data is not distributed with this repository. It is downloaded from Yahoo Finance (and optionally FRED and SEC EDGAR) into `data_pipeline/local_data/`, which is gitignored. See [Data and licensing](./README.md#data-and-licensing) before using it.
 
 ```bash
 uv run python -m data_pipeline.fetch_data

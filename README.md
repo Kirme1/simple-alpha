@@ -14,7 +14,7 @@ https://github.com/user-attachments/assets/a23510be-2f53-43b8-9719-7f87cc31328e
 
 ```bash
 git clone https://github.com/Kirme1/simple-alpha
-cd SimpleAlpha
+cd simple-alpha
 cp .env.example .env # add your API key here
 ```
 
@@ -86,7 +86,7 @@ docker network ls
 ```
 
 ```bash
-docker network inspector simple-alpha_default | grep Subnet
+docker network inspect simple-alpha_default | grep Subnet
 ```
 
 **2. Add an exception for this network in your firewall**
