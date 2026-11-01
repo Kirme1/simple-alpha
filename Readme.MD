@@ -4,7 +4,7 @@
 
 > Simple Alpha is a small harness connected to a temporal fusion transformer which allows llms to forecast price movements for financial assets with comprehensible explainations
 
-![Demo](https://github.com/user-attachments/assets/a23510be-2f53-43b8-9719-7f87cc31328e)
+https://github.com/user-attachments/assets/a23510be-2f53-43b8-9719-7f87cc31328e
 
 ## Quickstart
 
